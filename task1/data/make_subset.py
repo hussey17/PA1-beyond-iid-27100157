@@ -20,6 +20,8 @@ from sklearn.model_selection import train_test_split
 from torch.utils.data import Dataset
 from torchvision import transforms
 
+from task1.data.image_io import atomic_save_pil, is_valid_image_file
+
 
 STL10_CLASSES = [
     "airplane",
@@ -174,8 +176,10 @@ def export_clean_subset(
         image = geometry(image)
         image_id = f"test_{original_index:05d}"
         path = output_dir / f"{image_id}.png"
-        if not path.exists():
-            image.save(path)
+        # Atomic replacement also repairs a zero-byte or truncated file left by
+        # an interrupted Colab session.
+        if not is_valid_image_file(path):
+            atomic_save_pil(image, path)
         rows.append(
             {
                 "image_id": image_id,

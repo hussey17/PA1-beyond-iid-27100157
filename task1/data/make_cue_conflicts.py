@@ -18,7 +18,8 @@ import pandas as pd
 import torch
 from PIL import Image
 from torchvision import transforms
-from torchvision.utils import save_image
+
+from task1.data.image_io import atomic_save_tensor, is_valid_image_file
 
 
 ADAIN_REPOSITORY = "https://github.com/naoto0804/pytorch-AdaIN.git"
@@ -161,7 +162,14 @@ def generate_candidates(
     to_tensor = transforms.ToTensor()
     for start in range(0, len(manifest), batch_size):
         batch = manifest.iloc[start : start + batch_size]
-        missing = [row for row in batch.itertuples(index=False) if not Path(row.path).exists()]
+        # Existing-but-corrupt images are regenerated automatically. This is
+        # important on Colab, where a runtime interruption can leave a partial
+        # file whose pathname still exists.
+        missing = [
+            row
+            for row in batch.itertuples(index=False)
+            if not is_valid_image_file(row.path)
+        ]
         if not missing:
             continue
         content = torch.stack(
@@ -173,8 +181,7 @@ def generate_candidates(
         output = style_transfer_batch(vgg, decoder, content, style, alpha).cpu()
         for image_tensor, row in zip(output, missing):
             output_path = Path(row.path)
-            output_path.parent.mkdir(parents=True, exist_ok=True)
-            save_image(image_tensor, output_path)
+            atomic_save_tensor(image_tensor, output_path)
 
 
 def select_balanced_conflicts(

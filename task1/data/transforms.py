@@ -15,6 +15,8 @@ import pandas as pd
 from PIL import Image
 from torchvision.transforms import functional as TF
 
+from task1.data.image_io import atomic_save_pil, is_valid_image_file
+
 
 def grayscale_rgb(image: Image.Image) -> Image.Image:
     """Remove chromatic information while retaining three input channels."""
@@ -106,9 +108,9 @@ def generate_simple_intervention(
     rows = []
     for row in clean_manifest.itertuples(index=False):
         output_path = output_dir / f"{row.image_id}.png"
-        if not output_path.exists():
+        if not is_valid_image_file(output_path):
             image = Image.open(row.path).convert("RGB")
-            transform(image).save(output_path)
+            atomic_save_pil(transform(image), output_path)
         rows.append(
             {
                 "image_id": row.image_id,
@@ -135,8 +137,8 @@ def generate_patch_shuffle_set(
         shuffled, permutation = shuffle_patch_grid(
             image, image_seed=seed + int(row.original_index), grid_size=grid_size
         )
-        if not output_path.exists():
-            shuffled.save(output_path)
+        if not is_valid_image_file(output_path):
+            atomic_save_pil(shuffled, output_path)
         rows.append(
             {
                 "image_id": row.image_id,
@@ -167,14 +169,14 @@ def generate_translation_sets(
             condition_dir.mkdir(parents=True, exist_ok=True)
             for row in clean_manifest.itertuples(index=False):
                 output_path = condition_dir / f"{row.image_id}.png"
-                if not output_path.exists():
+                if not is_valid_image_file(output_path):
                     image = Image.open(row.path).convert("RGB")
                     transformed = (
                         image
                         if displacement == 0
                         else translate_reflect(image, displacement, direction)
                     )
-                    transformed.save(output_path)
+                    atomic_save_pil(transformed, output_path)
                 rows.append(
                     {
                         "image_id": row.image_id,

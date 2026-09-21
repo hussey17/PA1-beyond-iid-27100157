@@ -22,6 +22,10 @@ results/
 4. Complete the model-independent visual review of every AdaIN candidate before running model evaluation.
 5. Download the final `task1_results_seed6304.zip` archive and share the executed notebook for result interpretation.
 
+## Interrupted image writes
+
+Generated PNGs are validated before reuse and written through an atomic temporary-file replacement. If Colab is interrupted during generation, rerunning the relevant generation cell automatically repairs missing, zero-byte, truncated, or incorrectly sized files. A manifest audit reports any remaining invalid path before feature extraction begins.
+
 ## External attribution
 
 Cue conflicts use the MIT-licensed [`naoto0804/pytorch-AdaIN`](https://github.com/naoto0804/pytorch-AdaIN) implementation and its released pretrained weights. The method originates from Huang and Belongie, *Arbitrary Style Transfer in Real-time with Adaptive Instance Normalization* (ICCV 2017). External code is cloned at runtime and is not copied into this repository.

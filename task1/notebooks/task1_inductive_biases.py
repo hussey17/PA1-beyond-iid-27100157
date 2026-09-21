@@ -104,6 +104,7 @@ from task1.data.make_cue_conflicts import (
     prepare_adain,
     select_balanced_conflicts,
 )
+from task1.data.image_io import invalid_manifest_paths
 from task1.data.make_subset import (
     FileImageDataset,
     IndexedImageDataset,
@@ -273,6 +274,22 @@ for name, frame in {
     "translation": translation_manifest,
 }.items():
     frame.to_csv(RESULTS_ROOT / f"{name}_manifest.csv", index=False)
+
+# This audit catches failures here, close to image generation, rather than
+# later inside an opaque multi-process DataLoader traceback.
+for name, frame in {
+    "clean": clean_manifest,
+    "grayscale": grayscale_manifest,
+    "hue_90": hue_manifest,
+    "patch_shuffle": patch_manifest,
+    "translation": translation_manifest,
+}.items():
+    invalid = invalid_manifest_paths(frame)
+    if invalid:
+        raise RuntimeError(
+            f"{name} contains {len(invalid)} invalid generated images. "
+            f"First invalid path: {invalid[0]}"
+        )
 
 print("Generated/cached intervention images:")
 print({
@@ -544,6 +561,13 @@ def cached_features(cache_name, bundle, dataset):
 
 
 def manifest_features(bundle, frame, cache_name):
+    invalid = invalid_manifest_paths(frame)
+    if invalid:
+        raise RuntimeError(
+            f"Cannot extract {cache_name}: {len(invalid)} manifest images are "
+            f"missing or corrupt. Rerun the corresponding generation cell. "
+            f"First invalid path: {invalid[0]}"
+        )
     dataset = FileImageDataset(frame, bundle.tensor_transform)
     return cached_features(cache_name, bundle, dataset)
 
