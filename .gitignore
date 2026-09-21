@@ -1,0 +1,37 @@
+# macOS and editor files
+.DS_Store
+.idea/
+.vscode/
+
+# Python environments and caches
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Local datasets and generated artifacts
+/data/
+**/data/raw/
+**/data/downloads/
+**/cache/
+**/checkpoints/
+**/wandb/
+**/runs/
+*.pt
+*.pth
+*.ckpt
+
+# Temporary inspection files and local assignment copy
+tmp/
+PA1 Manual.pdf
+
+# Keep compact, machine-readable results in Git; ignore bulky arrays/features.
+**/results/*.npy
+**/results/*.npz
+**/results/*.pkl
+**/results/*.joblib
