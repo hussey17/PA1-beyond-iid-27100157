@@ -1,0 +1,7 @@
+# PyTorch and torchvision are intentionally omitted: Colab supplies a
+# CUDA-compatible pair. Reinstalling either can break the GPU runtime.
+open_clip_torch
+umap-learn
+PyYAML
+ipywidgets
+seaborn

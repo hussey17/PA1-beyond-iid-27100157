@@ -1,81 +1,77 @@
 # Task 1 Design Decision Register
 
-No experiment implementation should begin until the owner approves the decisions marked **Required**. Items marked **Implementation default** are documented for transparency but can be delegated without changing the research question.
+Status: **approved by the repository owner on 21 September 2026**. The choices below are now frozen for the first complete Task 1 run. Any later change must be recorded before rerunning the affected experiment.
 
 ## A. Required experimental-design decisions
 
-### 1. Dataset
+### 1. Dataset - approved
 
-- Choose **STL-10** or **Oxford-IIIT Pets**.
-- Recommended starting point: **STL-10**, because it has ten distinct classes, a naturally balanced 500-image test subset (50 per class), and lower compute and cue-conflict curation cost.
-- Record the hypothesis for how the chosen class granularity may affect color, shape, and texture reliance.
+- **STL-10**, selected to keep the Colab computation and cue-conflict review manageable.
+- The official test subset contains exactly 50 examples per class (500 total), selected with seed 6304. The saved subset manifest is reused for every model and intervention.
 
-### 2. Additional color intervention
+### 2. Additional color intervention - approved
 
-Grayscale is mandatory. Choose exactly one additional intervention and its fixed parameters:
+- **Fixed +90 degree hue rotation**, implemented as a `+0.25` hue-factor rotation in torchvision.
+- This quarter-turn changes hue while retaining saturation and value in HSV space, apart from small numerical effects introduced by RGB-HSV conversion.
+- Grayscale remains the mandatory common color-removal intervention.
+- Primary metrics: accuracy change and prediction consistency relative to the paired clean image.
 
-- **Fixed hue rotation**: cleanest controlled test of chromatic sensitivity; select one angle applied identically to all images.
-- **Palette transfer**: more natural-looking but introduces a reference-palette choice and possible texture/contrast changes.
-- **Class-swapped color statistics**: tests class-associated color cues directly but requires a deterministic class-pair/mapping rule and can introduce distribution artifacts.
+### 3. Cue-conflict construction - approved
 
-Pre-register what the transformation changes and preserves, a directional hypothesis, and the primary metrics (accuracy change and prediction consistency are mandatory).
+- Method: AdaIN using the public `naoto0804/pytorch-AdaIN` implementation and its released encoder/decoder weights.
+- Style strength: **alpha = 0.8**. In AdaIN, alpha linearly interpolates between the original content feature and the fully normalized content-style feature. A value of 0.8 is a pre-registered compromise: it supplies strong style evidence while retaining 20% of the original content feature to reduce destroyed or unrecognizable shapes. It is not a theoretically optimal value and will not be tuned using model predictions.
+- Unordered pairs, following the published STL-10 class order and using every class once:
+  - airplane <-> bird
+  - car <-> cat
+  - deer <-> dog
+  - horse <-> monkey
+  - ship <-> truck
+- Generate both directions. Initially generate 30 candidates per direction (300 total), then retain the first 20 visually valid candidates per direction. This yields 200 balanced conflicts. If a direction has fewer than 20 valid candidates, generate from its remaining deterministic pairs until the quota is met.
+- Reject only when the content object is no longer human-identifiable, the output is visibly corrupted, or the style effect is visually imperceptible. Record one reason for every rejection.
+- Review occurs before prediction generation. Model outputs cannot be consulted while deciding retention.
+- Report raw shape, texture, and other counts together with shape bias and coverage.
 
-### 3. Cue-conflict construction
+### 4. Representation visualization - approved
 
-Approve all of the following before generation:
+- **UMAP** with `n_neighbors=15`, `min_dist=0.1`, cosine distance, and seed 6304.
+- Fixed class-balanced subset: 20 clean test examples per class.
+- Translation visualization uses displacement 32 with the four directions assigned round-robin across the fixed visualization subset, so all directions are equally represented without duplicating clean points. Quantitative stability is computed for every nonzero displacement and direction.
+- One projection is fitted to combined clean and transformed features for each backbone/intervention combination. Absolute coordinates are not compared between separately fitted projections.
+- Figure organization: one row per backbone and one column per intervention. Cosine stability is the primary quantitative representation measure.
 
-- Style-transfer method/implementation (AdaIN is the manual's practical default).
-- At least five unordered class pairs.
-- Sampling rule and target count per pair and direction, with at least 200 accepted conflicts total.
-- Style strength and any other generator parameters.
-- A model-independent visual rejection rule defined before evaluation.
-- Human-review workflow for accepted/rejected images; model predictions must never determine retention.
+### 5. Pre-registered hypotheses - approved
 
-Pre-register the expected ordering of shape bias and coverage across ResNet-50, ViT-B/16, and CLIP. Shape bias and coverage are co-primary metrics; raw shape, texture, and other counts must also be retained.
+These are hypotheses to test, not conclusions or assumptions about architecture.
 
-### 4. Representation visualization
+1. **Color:** Removing chromatic information or rotating hue by 90 degrees will not substantially degrade classification relative to each predictor's clean baseline, suggesting that the learned decision functions are driven primarily by non-chromatic evidence. The notebook operationalizes "not substantially" as an absolute accuracy decrease of no more than five percentage points and reports the actual continuous change and prediction consistency.
+2. **Shape versus texture:** Among cue-conflict predictions that select either intended label, the content/shape label will be chosen more often than the style/texture label (shape bias above 50%). Coverage and the number of "other" predictions will be interpreted jointly: a high shape-bias estimate with low coverage is weak evidence. Stylization may still cause a large representation shift or increase "other" predictions even if the content label dominates among covered decisions.
+3. **Translation:** Accuracy and prediction consistency will decrease as displacement increases, indicating positional sensitivity introduced by finite image boundaries, stride/pooling, learned positional information, or the pretraining distribution.
+4. **Patch structure:** Patch shuffling will cause a non-catastrophic decline because local appearance and short-range geometric evidence remain available even though global organization is disrupted. Performance is expected to remain above the 10% chance level; the magnitude relative to translation is treated as an empirical result rather than assumed in advance.
+5. **Prediction versus representation:** Stronger interventions will generally reduce cosine representation stability, but prediction and representation stability will not correspond perfectly. Some examples may retain their predicted class despite substantial feature movement, while other small feature changes may cross a linear decision boundary.
+6. **CLIP adaptation:** The trained CLIP linear head will outperform zero-shot CLIP on STL-10 accuracy and macro-F1 because the supervised head adapts the fixed image representation to the dataset's class boundaries. A class-stratified paired bootstrap interval for the accuracy difference will distinguish a reliable improvement from sampling variation.
+7. **Architecture comparison:** No fixed ResNet-versus-ViT-versus-CLIP ordering is pre-registered. Architecture, pretraining data, supervision, augmentation, and capacity are confounded, so any observed ranking will be interpreted with that limitation.
 
-- Choose **t-SNE** or **UMAP**.
-- Choose projection settings (for example t-SNE perplexity/learning rate/iterations or UMAP neighbors/minimum distance/metric).
-- Choose the fixed, class-balanced visualization subset size.
-- Decide whether translation is visualized at every nonzero displacement or at one pre-registered displacement (32 px is the strongest diagnostic default).
-- Decide figure organization: one panel per backbone/intervention or a smaller pre-registered comparison set.
+Use 1,000 class-stratified bootstrap resamples for the principal paired accuracy comparisons without changing the manual's single-seed training protocol.
 
-Each backbone must fit its own 2D projection to combined clean and transformed features. Absolute coordinates must not be compared across separately fitted projections. Cosine representation stability remains the primary quantitative measure.
-
-### 5. Hypotheses and decision criteria
-
-Before seeing results, approve a short directional hypothesis for:
-
-- dataset/class granularity;
-- grayscale and the selected color transformation;
-- cue-conflict shape bias and coverage;
-- translation sensitivity as displacement increases;
-- patch-shuffle sensitivity;
-- representation/prediction agreement or mismatch;
-- trained CLIP head versus zero-shot CLIP.
-
-The manual fixes the central metrics. Decide whether to add uncertainty estimates (recommended: class-stratified bootstrap confidence intervals over evaluation examples) without changing the single-seed training protocol.
-
-## B. Required operational choices not fixed by the manual
+## B. Approved operational choices not fixed by the manual
 
 These affect reproducibility and should be approved once, then held constant:
 
-- Execution platform/device and acceptable compute/storage budget.
-- Linear-head training batch size.
-- Common deterministic geometric preprocessing before model-specific normalization (recommended: resize shorter side to 256, center crop to 224, RGB conversion, with no stochastic test augmentation).
-- Whether the linear-head training split uses any augmentation (recommended: none beyond deterministic preprocessing, to isolate the frozen representations).
-- Loss for linear heads (recommended: multiclass cross-entropy) and no learning-rate scheduler unless explicitly approved.
-- Confidence-interval policy, if any.
-- Cue-conflict visual-QA mechanism and who performs the final accept/reject review.
-- External style-transfer source and license/attribution.
+- Platform: Google Colab with an NVIDIA T4-class GPU. The notebook verifies CUDA availability before expensive steps.
+- Linear-head batch size: 128. Frozen-feature extraction batch size: 64, chosen conservatively for ViT-B/16 on a 16 GB T4.
+- Common preprocessing: convert to RGB, resize the shorter edge to 256, and center crop to 224 before model-specific normalization.
+- No stochastic augmentation for frozen feature extraction or linear-head training.
+- Linear-head loss: multiclass cross-entropy; no learning-rate scheduler.
+- Confidence intervals: 1,000 class-stratified bootstrap resamples where implemented.
+- Visual QA: an in-notebook review widget writes accepted/rejected decisions and reasons to a CSV manifest. The repository owner performs the review.
+- External source: `naoto0804/pytorch-AdaIN`, MIT licensed; the repository and original Huang and Belongie paper must be cited in code attribution.
 
-## C. Implementation defaults that may be delegated
+## C. Delegated implementation defaults
 
 Unless the owner requests otherwise, these can be implemented deterministically and documented:
 
 - Store split/subset identifiers and cue-conflict manifests as JSON/CSV.
-- Cache frozen features with labels, image identifiers, model name, preprocessing version, and checksum metadata.
+- Cache frozen features with labels and image identifiers, encode the model/condition in each cache filename, and invalidate a cache when its identifier sequence changes.
 - Use the manual's fixed seed, pretrained weights, prompt, optimizer settings, epoch cap, and patience exactly as written.
 - Select the best head checkpoint by validation accuracy; define improvement as strictly greater accuracy and keep the earliest checkpoint on ties.
 - Apply model-specific normalization only after constructing the same 224x224 RGB clean/transformed image.

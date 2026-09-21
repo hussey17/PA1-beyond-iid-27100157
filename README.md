@@ -5,8 +5,8 @@ Research code for Programming Assignment 1 in Advanced Topics in Machine Learnin
 ## Status
 
 - Repository scaffold: complete
-- Task 1 design decisions: awaiting owner approval
-- Task 1 implementation: not started
+- Task 1 design decisions: approved and frozen for the first run
+- Task 1 implementation: Colab notebook prepared; execution pending
 - Tasks 2-4: not started
 
 ## Reproducibility rules
@@ -34,7 +34,7 @@ Each task keeps notebooks separate from reusable Python modules. Notebooks docum
 
 ## Assignment ownership and AI-use boundary
 
-Coding assistance is used to generate and explain implementation code. The repository owner is responsible for understanding every submitted line, approving experimental design choices, running or validating experiments, interpreting results, and writing the report. No report prose is generated here unless the owner explicitly requests structural guidance consistent with the course policy.
+Coding assistance is used to generate and explain implementation code. The repository owner is responsible for understanding every submitted line, approving experimental design choices, running or validating experiments, interpreting results, and writing the report. The workflow may organize required evidence and check completeness, but it does not generate report prose.
 
 ## Data and environment
 

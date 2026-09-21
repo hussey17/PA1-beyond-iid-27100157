@@ -1,0 +1,47 @@
+seed: 6304
+dataset:
+  name: STL10
+  train_split: train
+  test_split: test
+  validation_fraction: 0.20
+  test_examples_per_class: 50
+preprocessing:
+  resize_shorter_edge: 256
+  crop_size: 224
+training:
+  head_batch_size: 128
+  feature_batch_size: 64
+  max_epochs: 50
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  patience: 5
+  loss: cross_entropy
+  scheduler: none
+color:
+  hue_degrees: 90
+cue_conflict:
+  method: AdaIN
+  implementation: https://github.com/naoto0804/pytorch-AdaIN
+  alpha: 0.8
+  candidates_per_direction: 30
+  accepted_per_direction: 20
+  class_pairs:
+    - [airplane, bird]
+    - [car, cat]
+    - [deer, dog]
+    - [horse, monkey]
+    - [ship, truck]
+translation:
+  displacements: [0, 8, 16, 32]
+  directions: [up, down, left, right]
+patch_shuffle:
+  grid_size: 4
+representation:
+  method: UMAP
+  examples_per_class: 20
+  n_neighbors: 15
+  min_dist: 0.1
+  metric: cosine
+  translation_displacement: 32
+uncertainty:
+  bootstrap_resamples: 1000
