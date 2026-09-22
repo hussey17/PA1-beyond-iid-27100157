@@ -1,0 +1,12 @@
+method:
+  name: cdan
+  classification_loss_weight: 1.0
+  domain_loss_weight: 1.0
+  gradient_reversal_max: 1.0
+  gradient_reversal_gamma: 10.0
+  conditional_map: feature_outer_product_softmax_probability
+  detach_feature: false
+  detach_probability: false
+  entropy_conditioning: false
+  discriminator_hidden_dim: 256
+  discriminator_dropout: 0.5

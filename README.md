@@ -7,7 +7,8 @@ Research code for Programming Assignment 1 in Advanced Topics in Machine Learnin
 - Repository scaffold: complete
 - Task 1 design decisions: approved and frozen for the first run
 - Task 1 implementation: Colab notebook prepared; execution pending
-- Tasks 2-4: not started
+- Task 2 implementation: Colab notebook and target-safe UDA pipeline prepared; execution pending
+- Tasks 3-4: not started
 
 ## Reproducibility rules
 

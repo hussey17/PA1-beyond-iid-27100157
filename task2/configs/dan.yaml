@@ -1,0 +1,13 @@
+method:
+  name: dan
+  classification_loss_weight: 1.0
+  mmd_weight: 1.0
+  mmd_kernel: rbf
+  kernel_bandwidth_multipliers: [0.5, 1.0, 2.0]
+  bandwidth_reference: combined_batch_off_diagonal_median_squared_distance
+  bandwidth_gradient: detached
+  mmd_estimator: biased_nonnegative
+controlled_study:
+  parameter: mmd_weight
+  values: [0.1, 1.0, 10.0]
+  primary_value: 1.0

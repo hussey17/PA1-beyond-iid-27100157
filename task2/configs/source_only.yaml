@@ -1,0 +1,3 @@
+method:
+  name: source_only
+  classification_loss_weight: 1.0

@@ -1,0 +1,6 @@
+# PyTorch and torchvision are supplied by Colab and intentionally not reinstalled.
+gdown
+PyYAML
+pandas
+scikit-learn
+seaborn

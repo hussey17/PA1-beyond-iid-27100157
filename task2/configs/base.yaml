@@ -1,0 +1,39 @@
+seed: 6304
+dataset:
+  name: PACS
+  source_domains: [photo, art_painting, cartoon]
+  target_domain: sketch
+  classes: [dog, elephant, giraffe, guitar, horse, house, person]
+  validation_fraction: 0.20
+preprocessing:
+  resize_size: 256
+  crop_size: 224
+  train_random_crop: true
+  train_horizontal_flip: true
+  evaluation_center_crop: true
+  normalization: ResNet18_Weights.IMAGENET1K_V1
+model:
+  backbone: resnet18
+  weights: IMAGENET1K_V1
+  feature_dim: 512
+  num_classes: 7
+  fine_tune_complete_network: true
+  freeze_batchnorm_running_statistics: true
+  train_batchnorm_affine: true
+training:
+  optimizer: AdamW
+  learning_rate: 0.0001
+  weight_decay: 0.0001
+  max_epochs: 30
+  patience: 5
+  source_batch_size_per_domain: 8
+  target_batch_size: 24
+  num_workers: 2
+  mixed_precision: true
+  checkpoint_metric: mean_source_validation_macro_f1
+  checkpoint_tie_rule: earliest
+evaluation:
+  domain_probe_test_fraction: 0.30
+  domain_probe_c: 1.0
+  domain_probe_balanced_sample: true
+  target_labels_final_only: true

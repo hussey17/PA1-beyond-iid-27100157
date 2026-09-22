@@ -1,0 +1,8 @@
+method:
+  name: dann
+  classification_loss_weight: 1.0
+  domain_loss_weight: 1.0
+  gradient_reversal_max: 1.0
+  gradient_reversal_gamma: 10.0
+  discriminator_hidden_dim: 256
+  discriminator_dropout: 0.5
