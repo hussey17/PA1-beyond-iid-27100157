@@ -42,11 +42,14 @@ PACS/
   sketch/{dog,...,person}/
 ```
 
-The downloader writes to a partial archive, verifies that it is a ZIP, checks
-archive members for path traversal, extracts into a temporary directory, and
-moves a validated dataset into place. It verifies the expected 9,991-image
-inventory. Interrupted or invalid partial downloads are never mistaken for a
-ready dataset.
+The downloader first accepts any existing standard PACS folder unchanged. When
+no such folder exists, it loads the public `flwrlabs/pacs` Hugging Face dataset
+at pinned revision `394113073258ead631f617d2e13bb377c0715c4b`. It checks the
+9,991-row count, required columns, seven-class order, and four domain names. The
+original encoded image bytes are written into a temporary canonical folder tree
+and moved into place only after full inventory validation. Hugging Face's cache
+provides resumable content-addressed downloads, while the temporary tree keeps
+an interrupted materialization from being mistaken for a ready dataset.
 
 `shared/pacs_protocol.py` creates an independent stratified 80/20 split inside
 each source domain with seed 6304. The manifest stores stable paths relative to

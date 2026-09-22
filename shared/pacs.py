@@ -8,9 +8,9 @@ from __future__ import annotations
 
 import shutil
 import tempfile
-import zipfile
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
+from io import BytesIO
 from pathlib import Path
 
 from PIL import Image
@@ -18,7 +18,8 @@ from PIL import Image
 PACS_DOMAINS = ("photo", "art_painting", "cartoon", "sketch")
 PACS_CLASSES = ("dog", "elephant", "giraffe", "guitar", "horse", "house", "person")
 IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".bmp"}
-DEFAULT_PACS_GDRIVE_ID = "1JFr8f805nMUelQWWmfnJR3y4_SYoN5Pd"
+DEFAULT_PACS_HF_DATASET = "flwrlabs/pacs"
+DEFAULT_PACS_HF_REVISION = "394113073258ead631f617d2e13bb377c0715c4b"
 
 
 @dataclass(frozen=True)
@@ -106,10 +107,18 @@ def validate_inventory(samples: Iterable[PACSSample]) -> None:
 
 def download_and_prepare_pacs(
     download_root: str | Path,
-    file_id: str = DEFAULT_PACS_GDRIVE_ID,
+    dataset_id: str = DEFAULT_PACS_HF_DATASET,
+    revision: str = DEFAULT_PACS_HF_REVISION,
 ) -> Path:
-    """Download PACS atomically from the public benchmark mirror and verify it."""
-    import gdown
+    """Materialize a pinned Hugging Face PACS mirror and verify the result.
+
+    Existing standard PACS folders are accepted unchanged.  Otherwise the
+    public 9,991-row dataset is fetched into the Hugging Face cache, original
+    image bytes are written to a temporary canonical folder tree, and the tree
+    is moved into place only after a complete validation.
+    """
+    from datasets import Image as HuggingFaceImage
+    from datasets import load_dataset
 
     download_root = Path(download_root).expanduser().resolve()
     download_root.mkdir(parents=True, exist_ok=True)
@@ -118,45 +127,95 @@ def download_and_prepare_pacs(
     except FileNotFoundError:
         pass
 
-    archive = download_root / "PACS.zip"
-    if not archive.is_file() or not zipfile.is_zipfile(archive):
-        partial = download_root / "PACS.zip.part"
-        if partial.exists():
-            partial.unlink()
-        result = gdown.download(id=file_id, output=str(partial), quiet=False)
-        if result is None or not zipfile.is_zipfile(partial):
-            raise RuntimeError("PACS download did not produce a valid ZIP archive")
-        partial.replace(archive)
-
     temporary_root = Path(tempfile.mkdtemp(prefix="pacs_extract_", dir=download_root))
     try:
-        with zipfile.ZipFile(archive) as bundle:
-            for member in bundle.infolist():
-                destination = (temporary_root / member.filename).resolve()
-                if (
-                    temporary_root not in destination.parents
-                    and destination != temporary_root
-                ):
+        try:
+            dataset = load_dataset(
+                dataset_id,
+                split="train",
+                revision=revision,
+                cache_dir=str(download_root / "hf_cache"),
+            )
+        except Exception as error:
+            raise RuntimeError(
+                f"Could not fetch pinned PACS dataset {dataset_id}@{revision}. "
+                f"Retry the cell, or place a standard PACS folder containing "
+                f"{', '.join(PACS_DOMAINS)} below {download_root}."
+            ) from error
+        if len(dataset) != 9991:
+            raise RuntimeError(
+                f"Expected 9,991 PACS rows from {dataset_id}, received {len(dataset):,}"
+            )
+        required_columns = {"image", "domain", "label"}
+        if not required_columns.issubset(dataset.column_names):
+            raise RuntimeError(
+                f"{dataset_id} is missing required columns: "
+                f"{sorted(required_columns - set(dataset.column_names))}"
+            )
+        label_names = tuple(dataset.features["label"].names)
+        if label_names != PACS_CLASSES:
+            raise RuntimeError(
+                f"Unexpected PACS class order from {dataset_id}: {label_names}"
+            )
+        dataset = dataset.cast_column("image", HuggingFaceImage(decode=False))
+        extracted_root = temporary_root / "PACS"
+        for row_index, row in enumerate(dataset):
+            domain = str(row["domain"])
+            label = int(row["label"])
+            if domain not in PACS_DOMAINS:
+                raise RuntimeError(
+                    f"Unexpected PACS domain from {dataset_id}: {domain}"
+                )
+            if not 0 <= label < len(PACS_CLASSES):
+                raise RuntimeError(f"Unexpected PACS label from {dataset_id}: {label}")
+            image_record = row["image"]
+            image_bytes = image_record.get("bytes")
+            source_path = image_record.get("path")
+            if image_bytes is None:
+                if not source_path:
                     raise RuntimeError(
-                        f"Unsafe path in PACS archive: {member.filename}"
+                        f"PACS row {row_index} has no image bytes or path"
                     )
-            bundle.extractall(temporary_root)
-        extracted_root = discover_pacs_root(temporary_root)
+                image_bytes = Path(source_path).read_bytes()
+            suffix = Path(source_path or "").suffix.lower()
+            if suffix not in IMAGE_SUFFIXES:
+                with Image.open(BytesIO(image_bytes)) as image:
+                    suffix = {
+                        "JPEG": ".jpg",
+                        "PNG": ".png",
+                        "BMP": ".bmp",
+                    }.get(image.format or "")
+                if suffix is None:
+                    raise RuntimeError(
+                        f"Unsupported image format in PACS row {row_index}"
+                    )
+            destination = (
+                extracted_root
+                / domain
+                / PACS_CLASSES[label]
+                / f"hf_{row_index:05d}{suffix}"
+            )
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_bytes(image_bytes)
+
+        discovered_root = discover_pacs_root(extracted_root)
+        inventories = [
+            scan_unlabeled_domain(discovered_root, domain) for domain in PACS_DOMAINS
+        ]
+        if sum(map(len, inventories)) != 9991:
+            raise RuntimeError(
+                "Prepared PACS inventory does not contain the expected 9,991 images"
+            )
         final_root = download_root / "PACS"
         if final_root.exists():
             raise RuntimeError(
                 f"{final_root} exists but is not a valid PACS root; move it aside and rerun"
             )
-        shutil.move(str(extracted_root), str(final_root))
+        shutil.move(str(discovered_root), str(final_root))
     finally:
         shutil.rmtree(temporary_root, ignore_errors=True)
 
     root = discover_pacs_root(final_root)
-    inventories = [scan_unlabeled_domain(root, domain) for domain in PACS_DOMAINS]
-    if sum(map(len, inventories)) != 9991:
-        raise RuntimeError(
-            "Prepared PACS inventory does not contain the expected 9,991 images"
-        )
     return root
 
 

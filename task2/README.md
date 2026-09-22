@@ -58,9 +58,9 @@ task2/
 ## External attribution
 
 - PACS originates from Li et al., *Deeper, Broader and Artier Domain
-  Generalization* (ICCV 2017). The notebook uses the public PACS archive mirror
-  also referenced by research benchmark download scripts; no dataset images are
-  committed.
+  Generalization* (ICCV 2017). The notebook materializes the public
+  `flwrlabs/pacs` Hugging Face mirror at a pinned repository revision; no dataset
+  images are committed.
 - DAN follows Long et al. (ICML 2015), DANN follows Ganin et al. (JMLR 2016),
   and CDAN follows Long et al. (NeurIPS 2018). The implementations here are
   assignment-specific and written around the common training pipeline rather

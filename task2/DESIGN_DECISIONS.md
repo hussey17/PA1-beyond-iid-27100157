@@ -11,6 +11,10 @@ Status: **approved by the repository owner on 22 September 2026**. These choices
 
 ## Operational choices not numerically fixed by the manual
 
+- Acquire PACS from the public `flwrlabs/pacs` Hugging Face mirror at pinned
+  revision `394113073258ead631f617d2e13bb377c0715c4b`, unless a valid standard
+  PACS folder already exists locally. Preserve encoded image bytes and validate
+  all 9,991 examples before exposing the prepared folder to the experiment.
 - An epoch contains `max(len(source_domain_loader))` updates. Shorter source loaders and the target loader are cycled so every update still contains 8 examples from each source domain and 24 target examples.
 - MMD uses the biased, nonnegative squared empirical mean-embedding estimator. This matches the displayed squared RKHS-distance objective and avoids treating a negative unbiased estimate as an optimization target.
 - Kernel bandwidth uses the detached median of positive off-diagonal squared distances in the current combined source-target batch. Each RBF is `exp(-distance_squared / bandwidth)` and the three kernels are summed.
