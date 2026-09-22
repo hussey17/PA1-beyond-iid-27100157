@@ -69,13 +69,19 @@ subprocess.run(
     ],
     check=True,
 )
+CURRENT_COMMIT = subprocess.check_output(
+    ["git", "-C", str(REPOSITORY_ROOT), "rev-parse", "--short", "HEAD"], text=True
+).strip()
 print(f"Working directory: {Path.cwd()}")
+print(f"Repository commit: {CURRENT_COMMIT}")
 
 # %% [markdown]
 # ## 1. Imports, configuration, and reproducibility
 
 # %%
 import gc
+import importlib
+import inspect
 import json
 import platform
 import shutil
@@ -88,11 +94,22 @@ import torch
 import yaml
 from IPython.display import display
 
+# Colab can retain imported modules even after `git pull` updates their files.
+# Purge repository modules before importing them so this notebook cannot call a
+# stale downloader or training implementation from an earlier runtime state.
+for loaded_name in tuple(sys.modules):
+    if loaded_name in {"shared", "task2"} or loaded_name.startswith(
+        ("shared.", "task2.")
+    ):
+        del sys.modules[loaded_name]
+importlib.invalidate_caches()
+
 from shared.pacs import (
     PACS_CLASSES,
+    PACS_PROVIDER_SIGNATURE,
     PACSLabeledDataset,
     PACSUnlabeledDataset,
-    download_and_prepare_pacs,
+    prepare_pacs_from_huggingface,
     scan_domain,
     scan_unlabeled_domain,
     validate_inventory,
@@ -175,7 +192,14 @@ print(f"CUDA device: {torch.cuda.get_device_name(0)}")
 # ## 3. Download, validate, and inventory PACS
 
 # %%
-PACS_ROOT = download_and_prepare_pacs(DATA_ROOT)
+active_loader_source = inspect.getsource(prepare_pacs_from_huggingface)
+if "load_dataset" not in active_loader_source or "gdown" in active_loader_source:
+    raise RuntimeError(
+        "A stale PACS loader is still active. Use Runtime > Disconnect and delete "
+        "runtime, reopen the notebook, and run from the first cell."
+    )
+print(f"PACS provider: {PACS_PROVIDER_SIGNATURE}")
+PACS_ROOT = prepare_pacs_from_huggingface(DATA_ROOT)
 samples_by_domain = {
     domain: scan_domain(PACS_ROOT, domain) for domain in SOURCE_DOMAINS
 }

@@ -20,6 +20,9 @@ PACS_CLASSES = ("dog", "elephant", "giraffe", "guitar", "horse", "house", "perso
 IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".bmp"}
 DEFAULT_PACS_HF_DATASET = "flwrlabs/pacs"
 DEFAULT_PACS_HF_REVISION = "394113073258ead631f617d2e13bb377c0715c4b"
+PACS_PROVIDER_SIGNATURE = (
+    f"huggingface:{DEFAULT_PACS_HF_DATASET}@{DEFAULT_PACS_HF_REVISION}"
+)
 
 
 @dataclass(frozen=True)
@@ -105,7 +108,7 @@ def validate_inventory(samples: Iterable[PACSSample]) -> None:
             raise ValueError(f"Unreadable PACS image: {sample.path}") from error
 
 
-def download_and_prepare_pacs(
+def prepare_pacs_from_huggingface(
     download_root: str | Path,
     dataset_id: str = DEFAULT_PACS_HF_DATASET,
     revision: str = DEFAULT_PACS_HF_REVISION,
@@ -217,6 +220,15 @@ def download_and_prepare_pacs(
 
     root = discover_pacs_root(final_root)
     return root
+
+
+def download_and_prepare_pacs(
+    download_root: str | Path,
+    dataset_id: str = DEFAULT_PACS_HF_DATASET,
+    revision: str = DEFAULT_PACS_HF_REVISION,
+) -> Path:
+    """Backward-compatible alias for the explicit Hugging Face loader."""
+    return prepare_pacs_from_huggingface(download_root, dataset_id, revision)
 
 
 class PACSLabeledDataset:

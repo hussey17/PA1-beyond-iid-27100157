@@ -46,8 +46,12 @@ task2/
 ## Colab workflow
 
 1. Open `notebooks/task2_domain_adaptation.ipynb` and select a T4-class GPU.
-2. Run through the training and source-only diagnostic stages. The PACS archive
-   is downloaded and verified, and the shared source split is saved.
+   If this runtime previously ran an older Task 2 notebook, disconnect and
+   delete the runtime first; the notebook also purges cached repository modules
+   and prints the active Git commit and PACS provider.
+2. Run through the training and source-only diagnostic stages. The pinned PACS
+   Hugging Face dataset is downloaded and verified, and the shared source split
+   is saved.
 3. Inspect the six selected runs and the experiment lock. Training never
    receives a Sketch label.
 4. Change `RUN_FINAL_TARGET_EVALUATION` to `True` only after accepting the

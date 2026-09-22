@@ -51,6 +51,13 @@ and moved into place only after full inventory validation. Hugging Face's cache
 provides resumable content-addressed downloads, while the temporary tree keeps
 an interrupted materialization from being mistaken for a ready dataset.
 
+Colab retains Python modules across repeated notebook opens within one runtime.
+After updating the Git checkout, the notebook explicitly removes all loaded
+`shared.*` and `task2.*` modules before importing the experiment code. The data
+cell prints the pinned Hugging Face provider and inspects the active loader
+source, aborting with a clear stale-runtime message if an obsolete `gdown`
+implementation is somehow still resident.
+
 `shared/pacs_protocol.py` creates an independent stratified 80/20 split inside
 each source domain with seed 6304. The manifest stores stable paths relative to
 the PACS root, rather than machine-specific absolute paths. Loading the manifest
